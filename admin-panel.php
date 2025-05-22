@@ -134,6 +134,44 @@ if(isset($_GET["generate_bill"])){
  
   $content .= generate_bill();
   $obj_pdf -> writeHTML($content);
+  
+  // Add QR code to the PDF with detailed appointment information
+  // Get the patient and appointment information for the QR code
+  $pid = $_SESSION['pid'];
+  $qr_data_query = mysqli_query($con, "select p.pid, p.ID, p.fname, p.lname, p.doctor, p.appdate, p.apptime 
+                                     from prestb p 
+                                     where p.pid = '$pid' and p.ID = '".$_GET['ID']."'");
+  $qr_data = mysqli_fetch_assoc($qr_data_query);
+  
+  // Format the QR code content with all requested information
+  $qrContent = "DocLab - Hospital Management System\n";
+  $qrContent .= "Patient ID: " . $qr_data['pid'] . "\n";
+  $qrContent .= "Patient Name: " . $qr_data['fname'] . ' ' . $qr_data['lname'] . "\n";
+  $qrContent .= "Doctor: " . $qr_data['doctor'] . "\n";
+  $qrContent .= "Appointment Date: " . $qr_data['appdate'] . "\n";
+  $qrContent .= "Appointment Time: " . $qr_data['apptime'] . "\n";
+  $qrContent .= "Generated: " . date('Y-m-d H:i:s');
+  
+  // Add the QR code at the bottom right of the page
+  $obj_pdf->write2DBarcode(
+      $qrContent,       // Data to encode
+      'QRCODE,H',       // QR code with high error correction
+      150,              // X position (adjust as needed)
+      $obj_pdf->getY() + 10, // Y position - add some space after content
+      50,               // Width (increased for more data)
+      50,               // Height (increased for more data)
+      array(            // Style options
+          'border' => 0,
+          'padding' => 0,
+          'fgcolor' => array(0, 0, 0),
+          'bgcolor' => array(255, 255, 255)
+      ),
+      'N'               // Alignment (N = no label/text)
+  );
+  
+  // Add a text label above the QR code
+  $obj_pdf->SetFont('helvetica', '', 10);
+  $obj_pdf->Text(140, $obj_pdf->getY() + 5, 'Scan for appointment details');
   ob_end_clean();
   $obj_pdf -> Output("bill.pdf",'I');
 
